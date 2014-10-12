@@ -47,6 +47,8 @@ class MyMediaBlogBase < MyMedia::Base
 
   end  
     
+
+
   protected
   
   def html(raw_buffer, filename)
@@ -116,9 +118,83 @@ class MyMediaBlogBase < MyMedia::Base
     end
     
     return doc
-  end  
+  end
   
- 
+  def xml(raw_buffer, filename, original_file)
+
+    begin
+
+      buffer = Martile.new(raw_buffer).to_html
+
+      lines = buffer.strip.lines.to_a
+      raw_title = lines.shift.chomp
+      raw_tags = lines.pop[/[^>]+$/].split
+
+      s = lines.join.gsub(/(?:^\[|\s\[)[^\]]+\]\((https?:\/\/[^\s]+)/) do |x|
+        
+        next x if x[/#{@domain}/]
+        s2 = x[/https?:\/\/([^\/]+)/,1].split(/\./)
+        r = s2.length >= 3 ? s2[1..-1] :  s2
+        "%s [%s]" % [x, r.join('.')]
+      end      
+
+      html = RDiscount.new(s).to_html
+      doc = Rexle.new("<body>%s</body>" % html)
+
+      doc.root.xpath('//a').each do |x|
+
+        next unless x.attributes[:href].empty?
+        
+        new_link = x.text.gsub(/\s/,'_')
+
+        x.attributes[:href] = "#{@dynamic_website}/do/#{@public_type}/new/" + new_link
+        x.attributes[:class] = 'new'
+        x.attributes[:title] = x.text + ' (page does not exist)'
+      end
+      
+      body = doc.root.children.join
+
+      
+      xml = RexleBuilder.new
+      
+      a = xml.page do 
+        xml.summary do
+          xml.title raw_title
+          xml.tags { raw_tags.each {|tag| xml.tag tag }}
+          xml.source_url filename
+          xml.source_file File.basename(filename)
+          xml.original_file original_file
+          xml.published Time.now.strftime("%d-%m-%Y %H:%M")
+        end
+        
+        xml.body body
+      end
+    
+    rescue
+      @logger.debug "mymedia-blogbase.rb: html: " + ($!).to_s
+    end
+    
+    return Rexle.new(a)
+  end
+  
+
+  def microblog_title2(doc)
+
+    summary = doc.root.element('summary')
+    title = summary.text('title')
+    tags = summary.xpath('tags/tag/text()').map{|x| '#' + x}.join ' '
+
+    url = "%s/%s/yy/mm/dd/hhmmhrs.html" % [@website, @media_type]
+    full_title = (url + title + ' ' + tags)
+
+    if full_title.length > 140 then
+      extra = full_title.length - 140
+      title = title[0..-(extra)] + ' ...'
+    end
+
+    title + ' ' + tags
+
+  end  
 
   def microblog_title(doc)
     
@@ -138,7 +214,6 @@ class MyMediaBlogBase < MyMedia::Base
   end  
   
   private
-    
 
   def add_css_js(xml)
     # overridden in the RSF file
