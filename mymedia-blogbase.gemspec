@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'mymedia-blogbase'
-  s.version = '0.1.1'
+  s.version = '0.1.2'
   s.summary = 'Provides the basic features to publish page content'
   s.authors = ['James Robertson']
   s.files = Dir['lib/**/*.rb']

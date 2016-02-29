@@ -65,12 +65,7 @@ class MyMediaBlogBase < MyMedia::Base
       s = a.pop[/[^>]+$/].split.map{|x| "<li>%s</li>" % x}.join
       a.push "%s<ul>%s</ul>" % [$`, s]
       
-      s = a.join.gsub(/(?:^\[|\s\[)[^\]]+\]\((https?:\/\/[^\s]+)/) do |x|
-        next x if x[/#{@domain}/]
-        s2 = x[/https?:\/\/([^\/]+)/,1].split(/\./)
-        r = s2.length >= 3 ? s2[1..-1] :  s2
-        "%s [%s]" % [x, r.join('.')]
-      end      
+      s = a.join
 
       raw_body = "<body>%s</body>" % RDiscount.new(s).to_html
       
